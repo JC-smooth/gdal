@@ -1579,7 +1579,29 @@ func (sourceRaster RasterBand) RasterBandCopyWholeRaster(
 }
 
 // Generate downsampled overviews
-// Unimplemented: RegenerateOverviews
+func RegenerateOverviews(hSrcBand RasterBand, nOverviewCount int, pahOvrBands []RasterBand,
+	pszResampling string, progress ProgressFunc, data interface{}) int {
+	arg := &goGDALProgressFuncProxyArgs{progress, data}
+
+	cPahOvrBands := make([]*C.GDALRasterBandH, nOverviewCount)
+	for i := 0; i < nOverviewCount; i++ {
+		cPahOvrBands[i] = pahOvrBands[i].cval
+		defer C.free(unsafe.Pointer(cPahOvrBands[i]))
+	}
+
+	cPszResampling := C.CString(pszResampling)
+	defer C.free(unsafe.Pointer(cPszResampling))
+
+	return C.GDALRegenerateOverviews(
+		hSrcBand.cval,
+		C.int(nOverviewCount),
+		cPahOvrBands,
+		cPszResampling,
+		C.goGDALProgressFuncProxyB(),
+		unsafe.Pointer(arg),
+	)
+}
+
 
 /* ==================================================================== */
 /*     GDALAsyncReader                                                  */
