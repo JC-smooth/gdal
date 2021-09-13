@@ -889,6 +889,13 @@ const (
 	GRA_Lanczos          = ResampleAlg(4)
 )
 
+// Reproject image
+func ReprojectImage()  {
+	
+}
+
+
+// Create virtual warped dataset automatically
 func (dataset Dataset) AutoCreateWarpedVRT(srcWKT, dstWKT string, resampleAlg ResampleAlg) (Dataset, error) {
 	c_srcWKT := C.CString(srcWKT)
 	defer C.free(unsafe.Pointer(c_srcWKT))
@@ -1580,10 +1587,10 @@ func (sourceRaster RasterBand) RasterBandCopyWholeRaster(
 
 // Generate downsampled overviews
 func RegenerateOverviews(hSrcBand RasterBand, nOverviewCount int, pahOvrBands []RasterBand,
-	pszResampling string, progress ProgressFunc, data interface{}) int {
+	pszResampling string, progress ProgressFunc, data interface{}) error {
 	arg := &goGDALProgressFuncProxyArgs{progress, data}
 
-	cPahOvrBands := make([]*C.GDALRasterBandH, nOverviewCount)
+	cPahOvrBands := make([]C.GDALRasterBandH, nOverviewCount)
 	for i := 0; i < nOverviewCount; i++ {
 		cPahOvrBands[i] = pahOvrBands[i].cval
 		defer C.free(unsafe.Pointer(cPahOvrBands[i]))
@@ -1595,11 +1602,11 @@ func RegenerateOverviews(hSrcBand RasterBand, nOverviewCount int, pahOvrBands []
 	return C.GDALRegenerateOverviews(
 		hSrcBand.cval,
 		C.int(nOverviewCount),
-		cPahOvrBands,
+		(*C.GDALRasterBandH)(unsafe.Pointer(&cPahOvrBands[0])),
 		cPszResampling,
 		C.goGDALProgressFuncProxyB(),
 		unsafe.Pointer(arg),
-	)
+	).Err()
 }
 
 
