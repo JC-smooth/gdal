@@ -890,8 +890,41 @@ const (
 )
 
 // Reproject image
-func ReprojectImage()  {
-	
+func ReprojectImage(
+	hSrcDS Dataset,
+	srcWKT string,
+	hDstDS Dataset,
+	dstWKT string,
+	resampleAlg ResampleAlg,
+	dfWarpMemoryLimit, dfMaxError float64,
+	progress ProgressFunc,
+	data interface{},
+) error {
+	arg := &goGDALProgressFuncProxyArgs{progress, data}
+
+	pszSrcWKT := (*C.char)(unsafe.Pointer(nil))
+	pszDstWKT := (*C.char)(unsafe.Pointer(nil))
+	if len(srcWKT) != 0 {
+		pszSrcWKT = C.CString(srcWKT)
+		defer C.free(unsafe.Pointer(pszSrcWKT))
+	}
+	if len(dstWKT) != 0 {
+		pszDstWKT = C.CString(dstWKT)
+		defer C.free(unsafe.Pointer(pszDstWKT))
+	}
+
+	return C.GDALReprojectImage(
+		hSrcDS.cval,
+		pszSrcWKT,
+		hDstDS.cval,
+		pszDstWKT,
+		C.GDALResampleAlg(resampleAlg),
+		C.double(dfWarpMemoryLimit),
+		C.double(dfMaxError),
+		C.goGDALProgressFuncProxyB(),
+		unsafe.Pointer(arg),
+		nil,
+	).Err()
 }
 
 
@@ -1593,7 +1626,6 @@ func RegenerateOverviews(hSrcBand RasterBand, nOverviewCount int, pahOvrBands []
 	cPahOvrBands := make([]C.GDALRasterBandH, nOverviewCount)
 	for i := 0; i < nOverviewCount; i++ {
 		cPahOvrBands[i] = pahOvrBands[i].cval
-		defer C.free(unsafe.Pointer(cPahOvrBands[i]))
 	}
 
 	cPszResampling := C.CString(pszResampling)
